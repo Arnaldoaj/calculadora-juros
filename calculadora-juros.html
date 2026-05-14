@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Juros Compostos</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1a56db;
+    --blue-light: #e8f0fe;
+    --blue-dark: #1141a3;
+    --green: #0e9f6e;
+    --green-light: #e3fcef;
+    --red: #e02424;
+    --red-light: #fde8e8;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06);
+    --radius: 8px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--gray-100);
+    color: var(--gray-900);
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--blue-dark);
+    letter-spacing: -.3px;
+  }
+  header p { color: var(--gray-600); font-size: .9rem; margin-top: 4px; }
+
+  .card {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    max-width: 860px;
+    margin: 0 auto 20px;
+  }
+  .card h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex;
+    background: var(--gray-100);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+    width: fit-content;
+    margin-bottom: 20px;
+  }
+  .mode-toggle button {
+    padding: 8px 22px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: .875rem;
+    font-weight: 500;
+    transition: all .2s;
+    color: var(--gray-600);
+    background: transparent;
+  }
+  .mode-toggle button.active {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: var(--shadow);
+  }
+
+  /* Grid layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Form fields */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: .8rem; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .4px; }
+  input, select {
+    padding: 9px 12px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 6px;
+    font-size: .95rem;
+    color: var(--gray-900);
+    background: #fff;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
+  input::placeholder { color: var(--gray-400); }
+  input:disabled, select:disabled { background: var(--gray-50); color: var(--gray-400); cursor: not-allowed; }
+
+  .rate-group { display: flex; gap: 8px; }
+  .rate-group input { flex: 1; min-width: 0; }
+  .rate-group select { width: 140px; flex-shrink: 0; }
+
+  /* Lançamentos */
+  .lancamentos-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .lancamentos-header h2 { margin-bottom: 0; padding-bottom: 0; border: none; }
+
+  .lancamento-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 40px;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--gray-200);
+  }
+  .lancamento-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  @media (max-width: 500px) {
+    .lancamento-row { grid-template-columns: 1fr 1fr 36px; }
+  }
+
+  .btn-remove {
+    width: 36px; height: 36px;
+    border-radius: 6px;
+    border: 1.5px solid var(--gray-200);
+    background: #fff;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+    flex-shrink: 0;
+  }
+  .btn-remove:hover { background: var(--red-light); border-color: var(--red); }
+
+  .btn-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1.5px dashed var(--blue);
+    border-radius: 6px;
+    background: var(--blue-light);
+    color: var(--blue);
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    width: 100%;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  .btn-add:hover { background: var(--blue); color: #fff; border-style: solid; }
+
+  /* Botão calcular */
+  .btn-calcular {
+    width: 100%;
+    padding: 13px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+    letter-spacing: .3px;
+  }
+  .btn-calcular:hover { background: var(--blue-dark); }
+
+  /* Resultado */
+  #resultado { display: none; }
+
+  .resultado-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .resultado-header h2 { margin-bottom: 0; padding-bottom: 0; border: none; }
+
+  .btn-copiar {
+    padding: 7px 16px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 6px;
+    background: #fff;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-copiar:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  @media (max-width: 500px) { .summary-cards { grid-template-columns: 1fr; } }
+
+  .summary-card {
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    border: 1.5px solid var(--gray-200);
+  }
+  .summary-card.base { border-color: #a78bfa; background: #f5f3ff; }
+  .summary-card.hoje { border-color: var(--blue); background: var(--blue-light); }
+  .summary-card .label { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--gray-600); margin-bottom: 4px; }
+  .summary-card .value { font-size: 1.4rem; font-weight: 800; color: var(--gray-900); line-height: 1.2; }
+  .summary-card .sub { font-size: .78rem; color: var(--gray-600); margin-top: 4px; }
+
+  /* Tabela */
+  .table-wrapper { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  thead th {
+    background: var(--gray-50);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--gray-600);
+    border-bottom: 2px solid var(--gray-200);
+    white-space: nowrap;
+  }
+  thead th.right { text-align: right; }
+  tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  tbody td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:hover td { background: var(--gray-50); }
+  tbody tr.capital-row td { background: #fffbeb; font-style: italic; }
+  tfoot td {
+    padding: 12px 14px;
+    font-weight: 700;
+    background: var(--gray-50);
+    border-top: 2px solid var(--gray-200);
+  }
+  tfoot td.right { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: .7rem;
+    font-weight: 700;
+  }
+  .badge-divida { background: var(--red-light); color: var(--red); }
+  .badge-aplicacao { background: var(--green-light); color: var(--green); }
+
+  /* Fator */
+  .fator { font-size: .75rem; color: var(--gray-400); }
+
+  /* Erro */
+  .error-msg {
+    background: var(--red-light);
+    color: var(--red);
+    border: 1.5px solid #f98080;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: .875rem;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  .nota {
+    font-size: .78rem;
+    color: var(--gray-600);
+    background: var(--gray-50);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 16px;
+    border-left: 3px solid var(--gray-400);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Calculadora de Juros Compostos</h1>
+  <p>Múltiplos lançamentos com datas distintas · Dívida ou Aplicação</p>
+</header>
+
+<!-- Configurações gerais -->
+<div class="card">
+  <h2>Configurações</h2>
+
+  <div class="mode-toggle" id="modeToggle">
+    <button class="active" data-mode="divida" onclick="setMode('divida')">Dívida / Empréstimo</button>
+    <button data-mode="aplicacao" onclick="setMode('aplicacao')">Aplicação / Investimento</button>
+  </div>
+
+  <div class="grid-3">
+    <div class="field" style="grid-column: 1 / span 2">
+      <label>Taxa de Juros</label>
+      <div class="rate-group">
+        <input type="number" id="taxa" placeholder="10" step="0.001" min="0">
+        <select id="periodicidade">
+          <option value="ano">% ao ano</option>
+          <option value="mes">% ao mês</option>
+          <option value="dia">% ao dia</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Base de Dias</label>
+      <select id="baseDias">
+        <option value="365">365 dias</option>
+        <option value="360">360 dias</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:16px">
+    <div class="field">
+      <label id="lblCapital">Capital Original (opcional)</label>
+      <input type="text" id="capitalOriginal" placeholder="R$ 0,00" oninput="maskBRL(this)" onchange="toggleDataCapital()">
+    </div>
+    <div class="field">
+      <label>Data do Capital</label>
+      <input type="date" id="dataCapital" disabled>
+    </div>
+  </div>
+</div>
+
+<!-- Lançamentos -->
+<div class="card">
+  <div class="lancamentos-header">
+    <h2 id="lblLancamentos">Pagamentos</h2>
+  </div>
+
+  <div id="lancamentosContainer"></div>
+
+  <button class="btn-add" onclick="addLancamento()">
+    <span style="font-size:1.2rem">+</span>
+    <span id="lblAddBtn">Adicionar Pagamento</span>
+  </button>
+</div>
+
+<!-- Datas de referência -->
+<div class="card">
+  <h2>Datas de Referência</h2>
+  <div class="grid-2">
+    <div class="field">
+      <label>Data Base</label>
+      <input type="date" id="dataBase">
+    </div>
+    <div class="field">
+      <label>Data Alvo (segunda atualização)</label>
+      <input type="date" id="dataAlvo">
+    </div>
+  </div>
+</div>
+
+<div style="max-width:860px;margin:0 auto 20px">
+  <div class="error-msg" id="errorMsg"></div>
+  <button class="btn-calcular" onclick="calcular()">Calcular</button>
+</div>
+
+<!-- Resultado -->
+<div class="card" id="resultado">
+  <div class="resultado-header">
+    <h2>Resultado</h2>
+    <button class="btn-copiar" onclick="copiarResultado()">&#128203; Copiar resultado</button>
+  </div>
+
+  <div class="summary-cards" id="summaryCards"></div>
+
+  <div class="table-wrapper">
+    <table id="tabelaResultado">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Data</th>
+          <th class="right">Valor Original</th>
+          <th class="right" id="thBase">Valor na Data Base</th>
+          <th class="right" id="thAlvo">Valor na Data Alvo</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyResultado"></tbody>
+      <tfoot id="tfootResultado"></tfoot>
+    </table>
+  </div>
+
+  <div class="nota" id="notaFormula"></div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let mode = 'divida';
+let lancCounter = 0;
+
+// ─── Mode toggle ─────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('#modeToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === m);
+  });
+  const isDivida = m === 'divida';
+  document.getElementById('lblLancamentos').textContent = isDivida ? 'Pagamentos' : 'Depósitos / Aportes';
+  document.getElementById('lblAddBtn').textContent = isDivida ? 'Adicionar Pagamento' : 'Adicionar Depósito';
+  document.getElementById('lblCapital').textContent = isDivida ? 'Capital Original (opcional)' : 'Capital Inicial (opcional)';
+}
+
+// ─── Mask BRL ─────────────────────────────────────────────────────────────────
+function maskBRL(el) {
+  let v = el.value.replace(/\D/g, '');
+  if (!v) { el.value = ''; return; }
+  v = (parseInt(v, 10) / 100).toFixed(2);
+  el.value = 'R$ ' + v.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function parseBRL(str) {
+  if (!str) return 0;
+  return parseFloat(str.replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+}
+
+function formatBRL(n) {
+  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// ─── Lançamentos ──────────────────────────────────────────────────────────────
+function addLancamento(date = '', value = '') {
+  lancCounter++;
+  const id = lancCounter;
+  const container = document.getElementById('lancamentosContainer');
+  const div = document.createElement('div');
+  div.className = 'lancamento-row';
+  div.id = 'lanc-' + id;
+  div.innerHTML = `
+    <div class="field">
+      ${id === 1 ? '<label>Data</label>' : ''}
+      <input type="date" id="lancData${id}" value="${date}">
+    </div>
+    <div class="field">
+      ${id === 1 ? '<label>Valor</label>' : ''}
+      <input type="text" id="lancValor${id}" placeholder="R$ 0,00" value="${value}" oninput="maskBRL(this)">
+    </div>
+    <button class="btn-remove" title="Remover" onclick="removeLancamento(${id})" ${container.children.length === 0 ? 'style="margin-top:22px"' : ''}>✕</button>
+  `;
+  container.appendChild(div);
+}
+
+function removeLancamento(id) {
+  const el = document.getElementById('lanc-' + id);
+  if (el) el.remove();
+}
+
+function getLancamentos() {
+  const rows = document.querySelectorAll('#lancamentosContainer .lancamento-row');
+  return Array.from(rows).map((row, i) => {
+    const id = row.id.replace('lanc-', '');
+    const data = document.getElementById('lancData' + id)?.value;
+    const valor = parseBRL(document.getElementById('lancValor' + id)?.value);
+    return { n: i + 1, data, valor };
+  }).filter(l => l.data && l.valor > 0);
+}
+
+function toggleDataCapital() {
+  const cap = parseBRL(document.getElementById('capitalOriginal').value);
+  document.getElementById('dataCapital').disabled = cap <= 0;
+}
+
+// ─── Date helpers ────────────────────────────────────────────────────────────
+function parseDate(str) {
+  if (!str) return null;
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function diffDays(d1, d2) {
+  return Math.round((d2 - d1) / 86400000);
+}
+
+function fmtDate(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// ─── Taxa anual ───────────────────────────────────────────────────────────────
+function getTaxaAnual() {
+  const taxa = parseFloat(document.getElementById('taxa').value) / 100;
+  const per = document.getElementById('periodicidade').value;
+  if (per === 'ano') return taxa;
+  if (per === 'mes') return Math.pow(1 + taxa, 12) - 1;
+  if (per === 'dia') return Math.pow(1 + taxa, 365) - 1;
+  return taxa;
+}
+
+// ─── FV ───────────────────────────────────────────────────────────────────────
+function fv(pv, taxaAnual, dias, baseDias) {
+  const t = dias / baseDias;
+  return pv * Math.pow(1 + taxaAnual, t);
+}
+
+// ─── Calcular ────────────────────────────────────────────────────────────────
+function calcular() {
+  const errEl = document.getElementById('errorMsg');
+  errEl.style.display = 'none';
+
+  const taxa = parseFloat(document.getElementById('taxa').value);
+  const dataBase = document.getElementById('dataBase').value;
+  const dataAlvo = document.getElementById('dataAlvo').value;
+  const baseDias = parseInt(document.getElementById('baseDias').value);
+
+  if (isNaN(taxa) || taxa < 0) return showError('Informe uma taxa de juros válida.');
+  if (!dataBase) return showError('Informe a Data Base.');
+  if (!dataAlvo) return showError('Informe a Data Alvo.');
+
+  const lancamentos = getLancamentos();
+  if (lancamentos.length === 0) return showError('Adicione ao menos um lançamento com data e valor.');
+
+  const dBase = parseDate(dataBase);
+  const dAlvo = parseDate(dataAlvo);
+  const taxaAnual = getTaxaAnual();
+
+  // Capital original
+  const capitalVal = parseBRL(document.getElementById('capitalOriginal').value);
+  const dataCapStr = document.getElementById('dataCapital').value;
+  let capitalRow = null;
+  if (capitalVal > 0 && dataCapStr) {
+    const dCap = parseDate(dataCapStr);
+    const diasBase = diffDays(dCap, dBase);
+    const diasAlvo = diffDays(dCap, dAlvo);
+    capitalRow = {
+      n: 'C',
+      data: dataCapStr,
+      valor: capitalVal,
+      fvBase: fv(capitalVal, taxaAnual, diasBase, baseDias),
+      fvAlvo: fv(capitalVal, taxaAnual, diasAlvo, baseDias),
+      diasBase, diasAlvo
+    };
+  }
+
+  // Lançamentos
+  const rows = lancamentos.map(l => {
+    const dLanc = parseDate(l.data);
+    const diasBase = diffDays(dLanc, dBase);
+    const diasAlvo = diffDays(dLanc, dAlvo);
+    return {
+      ...l,
+      fvBase: fv(l.valor, taxaAnual, diasBase, baseDias),
+      fvAlvo: fv(l.valor, taxaAnual, diasAlvo, baseDias),
+      diasBase, diasAlvo
+    };
+  });
+
+  // Totais
+  const totalOrig = rows.reduce((s, r) => s + r.valor, 0) + (capitalRow ? capitalRow.valor : 0);
+  const totalBase = rows.reduce((s, r) => s + r.fvBase, 0) + (capitalRow ? capitalRow.fvBase : 0);
+  const totalAlvo = rows.reduce((s, r) => s + r.fvAlvo, 0) + (capitalRow ? capitalRow.fvAlvo : 0);
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+  const isDivida = mode === 'divida';
+  const badgeClass = isDivida ? 'badge-divida' : 'badge-aplicacao';
+  const badgeLabel = isDivida ? 'Dívida' : 'Aplicação';
+
+  // Summary
+  const sumCards = document.getElementById('summaryCards');
+  sumCards.innerHTML = `
+    <div class="summary-card base">
+      <div class="label">Total atualizado — Data Base (${fmtDate(dataBase)})</div>
+      <div class="value">${formatBRL(totalBase)}</div>
+      <div class="sub">${lancamentos.length} lançamento(s) · Original: ${formatBRL(totalOrig)}</div>
+    </div>
+    <div class="summary-card hoje">
+      <div class="label">Total atualizado — Data Alvo (${fmtDate(dataAlvo)})</div>
+      <div class="value">${formatBRL(totalAlvo)}</div>
+      <div class="sub">Taxa: ${taxa}% ${document.getElementById('periodicidade').options[document.getElementById('periodicidade').selectedIndex].text}</div>
+    </div>
+  `;
+
+  // Table headers
+  document.getElementById('thBase').textContent = `Atualizado até ${fmtDate(dataBase)}`;
+  document.getElementById('thAlvo').textContent = `Atualizado até ${fmtDate(dataAlvo)}`;
+
+  // Tbody
+  const tbody = document.getElementById('tbodyResultado');
+  tbody.innerHTML = '';
+
+  if (capitalRow) {
+    const tr = document.createElement('tr');
+    tr.className = 'capital-row';
+    tr.innerHTML = `
+      <td><span class="badge ${badgeClass}">${badgeLabel}</span> Capital</td>
+      <td>${fmtDate(capitalRow.data)}</td>
+      <td class="right">${formatBRL(capitalRow.valor)}</td>
+      <td class="right">${formatBRL(capitalRow.fvBase)}<br><span class="fator">×${(capitalRow.fvBase/capitalRow.valor).toFixed(4)} (${capitalRow.diasBase}d)</span></td>
+      <td class="right">${formatBRL(capitalRow.fvAlvo)}<br><span class="fator">×${(capitalRow.fvAlvo/capitalRow.valor).toFixed(4)} (${capitalRow.diasAlvo}d)</span></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.n}º</td>
+      <td>${fmtDate(r.data)}</td>
+      <td class="right">${formatBRL(r.valor)}</td>
+      <td class="right">${formatBRL(r.fvBase)}<br><span class="fator">×${(r.fvBase/r.valor).toFixed(4)} (${r.diasBase}d)</span></td>
+      <td class="right">${formatBRL(r.fvAlvo)}<br><span class="fator">×${(r.fvAlvo/r.valor).toFixed(4)} (${r.diasAlvo}d)</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Tfoot
+  const tfoot = document.getElementById('tfootResultado');
+  tfoot.innerHTML = `
+    <tr>
+      <td colspan="2">TOTAL</td>
+      <td class="right">${formatBRL(totalOrig)}</td>
+      <td class="right">${formatBRL(totalBase)}</td>
+      <td class="right">${formatBRL(totalAlvo)}</td>
+    </tr>
+  `;
+
+  // Nota
+  const per = document.getElementById('periodicidade').value;
+  let taxaExibida = `${taxa}% a.${per[0]}.`;
+  let taxaAnualExibida = per === 'ano' ? '' : ` (= ${(taxaAnual * 100).toFixed(6)}% a.a.)`;
+  document.getElementById('notaFormula').innerHTML =
+    `<strong>Fórmula:</strong> FV = PV × (1 + i)<sup>n</sup> &nbsp;|&nbsp; <strong>Taxa:</strong> ${taxaExibida}${taxaAnualExibida} &nbsp;|&nbsp; <strong>Base:</strong> ${baseDias} dias &nbsp;|&nbsp; <em>n = dias entre a data do lançamento e a data-alvo dividido por ${baseDias}</em>`;
+
+  document.getElementById('resultado').style.display = 'block';
+  document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ─── Copiar resultado ─────────────────────────────────────────────────────────
+function copiarResultado() {
+  const rows = document.querySelectorAll('#tbodyResultado tr');
+  const thBase = document.getElementById('thBase').textContent;
+  const thAlvo = document.getElementById('thAlvo').textContent;
+  let lines = [`#\tData\tValor Original\t${thBase}\t${thAlvo}`];
+  rows.forEach(tr => {
+    const cells = Array.from(tr.querySelectorAll('td')).map(td => td.firstChild?.textContent?.trim() || '');
+    lines.push(cells.join('\t'));
+  });
+  const tfoot = document.querySelectorAll('#tfootResultado td');
+  lines.push(Array.from(tfoot).map(td => td.textContent.trim()).join('\t'));
+
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.querySelector('.btn-copiar');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Copiado!';
+    setTimeout(() => btn.innerHTML = orig, 2000);
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  // Pré-popular com exemplo do usuário
+  const hoje = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const todayStr = `${hoje.getFullYear()}-${pad(hoje.getMonth()+1)}-${pad(hoje.getDate())}`;
+
+  document.getElementById('taxa').value = '';
+  document.getElementById('dataBase').value = '';
+  document.getElementById('dataAlvo').value = todayStr;
+
+  // Adicionar 3 linhas em branco por padrão
+  addLancamento();
+  addLancamento();
+  addLancamento();
+})();
+</script>
+</body>
+</html>
